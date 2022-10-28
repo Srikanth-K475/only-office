@@ -10,6 +10,7 @@
         + [Strengthening the Server Security](#strengthening-the-server-security)
         + [Installation of the SSL Certificates](#installation-of-the-ssl-certificates)
         + [Available Configuration Parameters](#available-configuration-parameters)
+    - [Running ONLYOFFICE Document Server using docker secrets](#running-onlyoffice-document-server-using-docker-secrets)
 * [Installing ONLYOFFICE Document Server integrated with Community and Mail Servers](#installing-onlyoffice-document-server-integrated-with-community-and-mail-servers)
 * [Issues](#issues)
     - [Docker Issues](#docker-issues)
@@ -165,6 +166,58 @@ chmod 400 /app/onlyoffice/DocumentServer/data/certs/tls.key
 
 You are now just one step away from having our application secured.
 
+### Running ONLYOFFICE Document Server using docker secrets
+
+For manage sensitive data like database password/username you can use Docker secrets. If you want use secrets, you must start the Document Server like service with docker compose or docker swarm. According to [official docker documentation](https://docs.docker.com/engine/swarm/secrets/) secrets did not avalivable to standalone containers. To start using the secrets you need to go through a few simple steps: 
+
+**STEP 1**: 
+At first you need to iniciate docker swarm with command:
+
+```bash
+sudo docker swarm init 
+```
+
+**STEP 2**:
+On the next step you need to make the secrets. DocumentServer support username/password for postgresql access and jwt header/secret. 
+
+If you want to use secrets for database access create secrets with command:
+
+```bash
+sudo printf "your_pass" | docker secret create dbPass -
+sudo printf "your_user" | docker secret create dbUser -
+```
+NOTE: After secrets dbPass and dbUser was created, DocumentServer will be configured automaticly for use the same secrets for postgres access.
+
+If you want to use JSON Web Token values from secrets create secrets with command: 
+
+```bash
+sudo printf "secret_value" | docker secret create jwtSecret -
+sudo printf "header_value" | docker secret create jwtHeader -
+```
+
+**STEP 3**:
+After secrets was created you need to build the DocumentServer with command:
+
+```bash
+sudo docker compose build
+```
+
+**STEP 4**:
+After all when images was builded and secrets was created very important uncomment in docker-compose.yml file strings with secrets thats you want to use. For more information refer to the comments in docker-compose.yml
+
+**STEP 5**:
+Now Document Server is ready to deploy with secrets. For that run: 
+
+```bash
+sudo docker stack deploy --compose-file=docker-compose.yml documentserver-secrets
+```
+
+Also you can run Document Server in docker-compose mode with the same config
+
+```bash
+sudo docker compose up -d 
+```
+
 #### Available Configuration Parameters
 
 *Please refer the docker run command options for the `--env-file` flag where you can specify all required environment variables in a single file. This will save you from writing a potentially long docker run command.*
@@ -204,6 +257,13 @@ Below is the complete list of parameters that can be set using environment varia
 - **METRICS_PREFIX**: Defines StatsD metrics prefix for backend services. Defaults to `ds.`.
 - **LETS_ENCRYPT_DOMAIN**: Defines the domain for Let's Encrypt certificate.
 - **LETS_ENCRYPT_MAIL**: Defines the domain administator mail address for Let's Encrypt certificate.
+
+Below list values avalivable only for compose/swarm mode.
+
+- **JWT_SECRET_FILE**: Specifies the path to the mounted file, the value from which will be used like JWT_Secret value. Default path that docker mounted secrets: `/run/secrets/jwtSecret`
+- **JWT_HEADER_FILE**: Specifies the path to the mounted file, the value from which will be used like JWT_Header value. Default path that docker mounted secrets: `/run/secrets/jwtHeader`
+- **POSTGRES_USER_FILE**: Default postgresql container value. Tells the database where to get the username value by set to db access. Default path: `run/secrets/dbUser`
+- **POSTGRES_PASSWORD_FILE**: Default postgresql container value. Tells the database where to get the password value by set to db access. Default path: `run/secrets/dbPass`
 
 ## Installing ONLYOFFICE Document Server integrated with Community and Mail Servers
 

@@ -21,6 +21,7 @@ LIB_DIR="/var/lib/${COMPANY_NAME}"
 DS_LIB_DIR="${LIB_DIR}/documentserver"
 CONF_DIR="/etc/${COMPANY_NAME}/documentserver"
 IS_UPGRADE="false"
+SECRETS_PATH="/run/secrets/"
 
 ONLYOFFICE_DATA_CONTAINER=${ONLYOFFICE_DATA_CONTAINER:-false}
 ONLYOFFICE_DATA_CONTAINER_HOST=${ONLYOFFICE_DATA_CONTAINER_HOST:-localhost}
@@ -90,6 +91,14 @@ JWT_SECRET=${JWT_SECRET:-$(pwgen -s 20)}
 JWT_HEADER=${JWT_HEADER:-Authorization}
 JWT_IN_BODY=${JWT_IN_BODY:-false}
 
+if [ ${USE_SECRETS} == "true" ] && [ -s ${SECRETS_PATH}/jwtSecret ]; then
+  JWT_SECRET=$( cat ${SECRETS_PATH}/jwtSecret )
+fi
+
+if [ ${USE_SECRETS} == "true" ] && [ -s ${SECRETS_PATH}/jwtHeader ]; then
+  JWT_HEADER=$( cat ${SECRETS_PATH}/jwtHeader ) 
+fi
+
 WOPI_ENABLED=${WOPI_ENABLED:-false}
 
 GENERATE_FONTS=${GENERATE_FONTS:-true}
@@ -122,6 +131,17 @@ if [ "${LETS_ENCRYPT_DOMAIN}" != "" -a "${LETS_ENCRYPT_MAIL}" != "" ]; then
   LETSENCRYPT_ROOT_DIR="/etc/letsencrypt/live"
   SSL_CERTIFICATE_PATH=${LETSENCRYPT_ROOT_DIR}/${LETS_ENCRYPT_DOMAIN}/fullchain.pem
   SSL_KEY_PATH=${LETSENCRYPT_ROOT_DIR}/${LETS_ENCRYPT_DOMAIN}/privkey.pem
+fi
+
+# update db credentials if secrets was configure
+if [ "${USE_SECRETS}" == "true" ]; then
+  if [ -s ${SECRETS_PATH}/dbUser ]; then
+    DB_USER=$( cat ${SECRETS_PATH}/dbUser )
+  fi
+
+  if [ -s ${SECRETS_PATH}/dbPass ]; then
+    DB_PWD=$( cat ${SECRETS_PATH}/dbPass )
+  fi
 fi
 
 read_setting(){
